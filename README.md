@@ -1,6 +1,6 @@
 # Image manipulation and processing library
 
-## Authors
+## Author
 Jimmy Francky Randrianasoa
 
 ## Usage
