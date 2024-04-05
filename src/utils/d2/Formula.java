@@ -39,7 +39,7 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package utils;
+package utils.d2;
 
 /**
  * Contains useful formulas. 
@@ -47,6 +47,21 @@ package utils;
  */
 public class Formula {
 
+//	/**
+//	 * 
+//	 * @param x position of a point (~pixel)
+//	 * @param y position of a point (~pixel)
+//	 * @param max number of rows or columns if(rows < columns)
+//	 * @return a single value embedding the x and the y
+//	 * 
+//	 * @see Formula#toX(int, int) compute the x from val
+//	 * @see Formula#toY(int, int) compute the y from val
+//	 */
+//	public static int toLocationVal(int x, int y, int max) {
+//
+//		return x + (max * y); 
+//	}
+	
 	/**
 	 * 
 	 * @param x position of a point (~pixel)
@@ -57,9 +72,9 @@ public class Formula {
 	 * @see Formula#toX(int, int) compute the x from val
 	 * @see Formula#toY(int, int) compute the y from val
 	 */
-	public static int toLocationVal(int x, int y, int max) {
+	public static int toVal(int x, int y, int max) {
 
-		return x + (max * y); 
+		return x * max + y; 
 	}
 	
 	/**

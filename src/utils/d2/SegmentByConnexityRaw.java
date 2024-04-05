@@ -39,13 +39,15 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package utils;
+package utils.d2;
 
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
+
+import utils.ImTool;
 
 /**
  * Create a segment for each "composantes connexe". Use 8-connexity. 

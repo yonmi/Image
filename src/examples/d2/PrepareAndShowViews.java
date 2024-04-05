@@ -39,40 +39,52 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package examples;
+package examples.d2;
 
 import java.awt.image.BufferedImage;
 
+import ui.ImFrame;
 import utils.ImTool;
 
 /**
- * Example drawing some rectangles on an image using {@link ImTool}.
+ * Example preparing and displaying the different views of an image using {@link ImTool}.
+ * 
+ * <p>
+ * Views are:
+ * <li> 0: the color image
+ * <li> 1: the band 1
+ * <li> 2: the band 2
+ * <li> 3: the band 3
+ * <li> ...
+ * <li> minimized icon of the image
+ *
  */
-public class DrawRectangleOnImage {
+public class PrepareAndShowViews {
 
 	public static void main(String[] args) {
-
-		/* Load the image */
+		
 		String path = "xp//examples//lena.jpg";
 		BufferedImage image = ImTool.read(path);
+		ImTool.initMinMaxValues(image);
+		ImTool.prepareViewsFrom(image, ImTool.DEFAULT_RGB_ORDER);
 		
-		/* Green rectangle parameters */
-		int minX1 = 89;
-		int maxX1 = 450;
-		int minY1 = 50;
-		int maxY1 = 420;
-		int color1 = ImTool.RGB_GREEN;
-		ImTool.drawRectangleOn(image, minX1, maxX1, minY1, maxY1, color1);
+		int viewId = 0;
+		BufferedImage imageColorView = ImTool.getViewOf(image, viewId);
+		ImTool.show(imageColorView, ImFrame.IMAGE_DEFAULT_SIZE, "Color image");
 		
-		/* Random color rectangle parameters */
-		int minX2 = 261;
-		int maxX2 = 379;
-		int minY2 = 263;
-		int maxY2 = 303;
-		int color2 = ImTool.generateRandomColorRGBValue();
-		ImTool.drawRectangleOn(image, minX2, maxX2, minY2, maxY2, color2);
+		BufferedImage imageColorIcon = ImTool.getIconViewOf(image, viewId);
+		ImTool.show(imageColorIcon, ImFrame.IMAGE_REAL_SIZE, "Icon-color-"+ viewId);
 		
-		/* Showing the result */
-		ImTool.show(image, 50, "Drawing rectangles");
+		for(int i = 0; i < ImTool.getNbBandsOf(image); i++) {
+			
+			viewId = i + 1;
+			
+			BufferedImage view = ImTool.getViewOf(image, viewId);
+			ImTool.show(view, ImFrame.IMAGE_DEFAULT_SIZE, "Band-"+ viewId);
+			
+			BufferedImage icon = ImTool.getIconViewOf(image, viewId);
+			ImTool.show(icon, ImFrame.IMAGE_REAL_SIZE, "Icon-band-"+ viewId);
+		}
+		
 	}
 }

@@ -68,8 +68,14 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.ImageIcon;
 
-import examples.LoadAndShow_Xbands;
+import examples.d2.LoadAndShow_Xbands;
 import ui.ImFrame;
+import utils.d2.Attribs;
+import utils.d2.LabelMatrix;
+import utils.d3.Attribs3D;
+import utils.d3.LabelMatrix3D;
+import utils.d3.RGBStruct;
+import utils.d3.Voxel;
 
 /**
  * A tool simplifying the management of {@link BufferedImage}.
@@ -86,6 +92,11 @@ public class ImTool {
 	 * Attribs set to an image if it is not registered.
 	 */
 	private static final Attribs DEFAULT_ATTRIBS = new Attribs();
+	
+	/**
+	 * Attribs set to a RGBCube if it is not registered.
+	 */
+	private static final Attribs3D DEFAULT_ATTRIBS_3D = new Attribs3D();
 	
 	/**
 	 * The bands order could vary according to the type of the image.
@@ -119,9 +130,24 @@ public class ImTool {
 	private static HashMap<BufferedImage, Attribs> register = new HashMap<BufferedImage, Attribs>();
 	
 	/**
+	 * Contains some advanced attributes of the RGBCube.
+	 */
+	private static HashMap<RGBStruct, Attribs3D> register3D = new HashMap<RGBStruct, Attribs3D>();
+	
+	/**
 	 * Green combined RGB value.
 	 */
 	public static final int RGB_GREEN = 0*65536+255*256+0;
+	
+	/**
+	 * Axes determining a face of a cube
+	 */
+	public enum CubeFace {
+		
+		XY,
+		XZ,
+		YZ
+	}
 
 	/**
 	 * Computes the value corresponding to the (percentage %) of maxValue.
@@ -436,6 +462,106 @@ public class ImTool {
 		
 		return edge;
 	}
+	
+	/**
+	 * Generate an image according to the x and y axis matrix of labels where each label is associated to a color stored in a LUT (LookUp Table). 
+	 * 
+	 * <p>
+	 * If a label is not associated with a color in the LUT, a random color is assigned to it.
+	 * 
+	 * @param labelMatrix3D contains all labels regrouping regions in the image; should not be null
+	 * @param cubeFace determines the face of the cube to consider (select two axis eg: XY)
+	 * @param lut map of RGB colors; created if null
+	 * @return an RGB image depicting regions
+	 * 
+	 * @throws NullPointerException if labelMatrix is null
+	 */
+	public static BufferedImage generateFaceofCube(LabelMatrix3D labelMatrix3D, CubeFace cubeFace, HashMap<Integer, Color> lut) {
+	
+		int w;
+		int h;
+		
+		switch(cubeFace) {
+		
+		case XY:
+			w = labelMatrix3D.getWidth();
+			h = labelMatrix3D.getHeight();
+			break;	
+		case XZ:
+			w = labelMatrix3D.getWidth();
+			h = labelMatrix3D.getDepth();
+			break;	
+		case YZ:
+			w = labelMatrix3D.getHeight();
+			h = labelMatrix3D.getDepth();
+			break;			
+		default:
+			w = labelMatrix3D.getWidth();
+			h = labelMatrix3D.getHeight();
+		}
+		
+		if(lut == null) {
+			
+			lut = new HashMap<Integer, Color>();
+		}
+	
+		BufferedImage imageRegions = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+	
+		Color color;
+		for(int j = 0; j < h; j++) {
+			for(int i = 0; i < w; i++) {
+	
+				int x;
+				int y;
+				int z;
+				
+				switch(cubeFace) {
+				
+				case XY:
+					x = i;
+					y = j;
+					z = 0;
+					break;	
+				case XZ:
+					x = i;
+					y = 0;
+					z = j;
+					break;	
+				case YZ:
+					x = 0;
+					y = i;
+					z = j;
+					break;			
+				default:
+					x = i;
+					y = j;
+					z = 0;
+				}
+				
+				int label = labelMatrix3D.getLabel(x, y, z);
+	
+				if(!lut.containsKey(label)) {
+	
+					Random rand = new Random();
+	
+					float r = rand.nextFloat();
+					float g = rand.nextFloat();
+					float b = rand.nextFloat();
+	
+					color = new Color(r, g, b);
+					lut.put(label, color);
+	
+				}else {
+					
+					color = lut.get(label);
+				}
+				
+				imageRegions.setRGB(i, j, color.getRGB());
+			}
+		}
+	
+		return imageRegions;		
+	}
 
 	/**
 	 * 
@@ -532,7 +658,7 @@ public class ImTool {
 	
 		return imageRegions;		
 	}
-
+	
 	/**
 	 * 
 	 * @param image of interest; should not be null
@@ -655,6 +781,32 @@ public class ImTool {
 		}
 	
 		return labelMatrix;
+	}
+	
+	/**
+	 * 
+	 * @param cube associated to the matrix 3D of labels to get.
+	 * @return the matrix 3D of labels; cannot be null as a new matrix of labels if created and filled automatically from the voxels if missing.
+	 * 
+	 * @throws NullPointerException if image is null
+	 */
+	public static LabelMatrix3D getLabelMatrix3DOf(RGBStruct cube) {
+
+		if(!ImTool.is(cube).registered) {
+			
+			Attribs3D attribs3D = new Attribs3D();
+			register3D.put(cube, attribs3D);
+			attribs3D.registered = true;
+		}
+		
+		LabelMatrix3D labelMatrix3D = register3D.get(cube).labelMatrix3D;
+		
+		if(labelMatrix3D == null) {
+			
+			labelMatrix3D = new LabelMatrix3D(cube.getxLevels(), cube.getyLevels(), cube.getzLevels());
+		}
+	
+		return labelMatrix3D;
 	}
 	
 	/**
@@ -825,7 +977,7 @@ public class ImTool {
 	 * Stores each minimum and maximum grayscale values of each band of an image.
 	 * 
 	 * <p>
-	 * Vectors containing the min an max values of each band are storing in the {@link utils.Attribs attribs} of the image. 
+	 * Vectors containing the min an max values of each band are storing in the {@link utils.d2.Attribs attribs} of the image. 
 	 * 
 	 * @param image having one or more bands; must not be null
 	 * 
@@ -890,6 +1042,18 @@ public class ImTool {
 		}
 		
 		return attribs;
+	}
+	
+	public static Attribs3D is(RGBStruct cube) {
+		
+		Attribs3D attribs3D = register3D.get(cube);
+		
+		if(attribs3D == null) {
+			
+			attribs3D = ImTool.DEFAULT_ATTRIBS_3D;
+		}
+		
+		return attribs3D;
 	}
 
 	/**
@@ -1143,6 +1307,16 @@ public class ImTool {
 		attribs.registered = true;
 	}
 	
+	public static void register3D(RGBStruct cube, String dir, String name, String path) {
+
+		Attribs3D attribs3D = new Attribs3D();
+		attribs3D.directory = dir;
+		attribs3D.name = name;
+		attribs3D.path = path;
+		register3D.put(cube, attribs3D);
+		attribs3D.registered = true;
+	}
+	
 	/**
 	 * Redraw an image by scaling it according to the width and height.
 	 * 
@@ -1393,5 +1567,357 @@ public class ImTool {
 		
 		new ImFrame(image, percent, title);
 	}
+	
+	public static void show(ArrayList<BufferedImage> images, int percent, String title, int sliderMin, int sliderMax, int sliderInitValue) {
+		
+		new ImFrame(images, percent, title, sliderMin, sliderMax, sliderInitValue);
+	}
+	
+	public static int[][] getConnectedNeibhorgs(int connectivity, int x, int y) {
+		
+		int coords[][];
+				
+		switch(connectivity) {
+		
+		case 8:
+			/* 4 connectivities */
+			coords = new int[8][2];
+			
+			/* 1st pixel */
+			coords[0][0] = x - 1;
+			coords[0][1] = y;
+			
+			/* 2nd pixel */
+			coords[1][0] = x - 1;
+			coords[1][1] = y + 1;
+			
+			/* 3rd pixel */
+			coords[2][0] = x;
+			coords[2][1] = y + 1;
+			
+			/* 4th pixel */
+			coords[3][0] = x + 1;
+			coords[3][1] = y + 1;
 
+			/* 5th pixel */
+			coords[4][0] = x + 1;
+			coords[4][1] = y;
+			
+			/* 6th pixel */
+			coords[5][0] = x + 1;
+			coords[5][1] = y - 1;
+			
+			/* 7th pixel */
+			coords[6][0] = x;
+			coords[6][1] = y - 1;
+
+			/* 8th pixel */
+			coords[7][0] = x;
+			coords[7][1] = y - 1;
+
+			break;
+		default:
+			/* 4 connectivities */
+			coords = new int[4][2];
+			
+			/* 1st pixel */
+			coords[0][0] = x - 1;
+			coords[0][1] = y;
+			
+			/* 2nd pixel */
+			coords[1][0] = x;
+			coords[1][1] = y + 1;
+			
+			/* 3rd pixel */
+			coords[2][0] = x + 1;
+			coords[2][1] = y;
+			
+			/* 4th pixel */
+			coords[3][0] = x;
+			coords[3][1] = y - 1;
+		}
+		
+		return coords;
+	}
+
+	public static int[][] getConnectedNeibhorgs(int connectivity, Voxel voxel) {
+		
+		int coords[][];
+		
+		int xVoxel = voxel.x;
+		int yVoxel = voxel.y;
+		int zVoxel = voxel.z;
+		
+		switch(connectivity) {
+		
+		case 6:
+			/* 6 connectivities */
+			coords = new int[6][3];
+			
+			/* 1st voxel */
+			coords[0][0] = xVoxel - 1;
+			coords[0][1] = yVoxel;
+			coords[0][2] = zVoxel;
+			
+			/* 2nd voxel */
+			coords[1][0] = xVoxel;
+			coords[1][1] = yVoxel + 1;
+			coords[1][2] = zVoxel;
+			
+			/* 3rd voxel */
+			coords[2][0] = xVoxel + 1;
+			coords[2][1] = yVoxel;
+			coords[2][2] = zVoxel;
+			
+			/* 4th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel - 1;
+			coords[3][2] = zVoxel;
+			
+			/* 5th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel;
+			coords[3][2] = zVoxel - 1;
+			
+			/* 6th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel;
+			coords[3][2] = zVoxel + 1;
+			
+			break;
+			
+		case 14:
+			/* 14 connectivities */
+			coords = new int[14][3];
+			
+			/* 1st voxel */
+			coords[0][0] = xVoxel - 1;
+			coords[0][1] = yVoxel;
+			coords[0][2] = zVoxel;
+			
+			/* 2nd voxel */
+			coords[1][0] = xVoxel;
+			coords[1][1] = yVoxel + 1;
+			coords[1][2] = zVoxel;
+			
+			/* 3rd voxel */
+			coords[2][0] = xVoxel + 1;
+			coords[2][1] = yVoxel;
+			coords[2][2] = zVoxel;
+			
+			/* 4th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel - 1;
+			coords[3][2] = zVoxel;
+			
+			/* 5th voxel */
+			coords[4][0] = xVoxel;
+			coords[4][1] = yVoxel;
+			coords[4][2] = zVoxel - 1;
+			
+			/* 6th voxel */
+			coords[5][0] = xVoxel;
+			coords[5][1] = yVoxel;
+			coords[5][2] = zVoxel + 1;
+			
+			/* 7th voxel */
+			coords[6][0] = xVoxel - 1;
+			coords[6][1] = yVoxel - 1;
+			coords[6][2] = zVoxel;
+			
+			/* 8th voxel */
+			coords[7][0] = xVoxel - 1;
+			coords[7][1] = yVoxel + 1;
+			coords[7][2] = zVoxel;
+			
+			/* 9th voxel */
+			coords[8][0] = xVoxel + 1;
+			coords[8][1] = yVoxel + 1;
+			coords[8][2] = zVoxel;
+			
+			/* 10th voxel */
+			coords[9][0] = xVoxel + 1;
+			coords[9][1] = yVoxel - 1;
+			coords[9][2] = zVoxel;
+			
+			/* 11th voxel */
+			coords[10][0] = xVoxel;
+			coords[10][1] = yVoxel - 1;
+			coords[10][2] = zVoxel - 1;
+
+			/* 12th voxel */
+			coords[11][0] = xVoxel;
+			coords[11][1] = yVoxel + 1;
+			coords[11][2] = zVoxel - 1;
+
+			/* 13th voxel */
+			coords[12][0] = xVoxel;
+			coords[12][1] = yVoxel + 1;
+			coords[12][2] = zVoxel + 1;
+
+			/* 14th voxel */
+			coords[13][0] = xVoxel;
+			coords[13][1] = yVoxel - 1;
+			coords[13][2] = zVoxel + 1;
+			
+			break;
+			
+		case 22:
+			/* 22 connectivities */
+			coords = new int[22][3];
+			
+			/* 1st voxel */
+			coords[0][0] = xVoxel - 1;
+			coords[0][1] = yVoxel;
+			coords[0][2] = zVoxel;
+			
+			/* 2nd voxel */
+			coords[1][0] = xVoxel;
+			coords[1][1] = yVoxel + 1;
+			coords[1][2] = zVoxel;
+			
+			/* 3rd voxel */
+			coords[2][0] = xVoxel + 1;
+			coords[2][1] = yVoxel;
+			coords[2][2] = zVoxel;
+			
+			/* 4th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel - 1;
+			coords[3][2] = zVoxel;
+			
+			/* 5th voxel */
+			coords[4][0] = xVoxel;
+			coords[4][1] = yVoxel;
+			coords[4][2] = zVoxel - 1;
+			
+			/* 6th voxel */
+			coords[5][0] = xVoxel;
+			coords[5][1] = yVoxel;
+			coords[5][2] = zVoxel + 1;
+			
+			/* 7th voxel */
+			coords[6][0] = xVoxel - 1;
+			coords[6][1] = yVoxel - 1;
+			coords[6][2] = zVoxel;
+			
+			/* 8th voxel */
+			coords[7][0] = xVoxel - 1;
+			coords[7][1] = yVoxel + 1;
+			coords[7][2] = zVoxel;
+			
+			/* 9th voxel */
+			coords[8][0] = xVoxel + 1;
+			coords[8][1] = yVoxel + 1;
+			coords[8][2] = zVoxel;
+			
+			/* 10th voxel */
+			coords[9][0] = xVoxel + 1;
+			coords[9][1] = yVoxel - 1;
+			coords[9][2] = zVoxel;
+			
+			/* 11th voxel */
+			coords[10][0] = xVoxel;
+			coords[10][1] = yVoxel - 1;
+			coords[10][2] = zVoxel - 1;
+
+			/* 12th voxel */
+			coords[11][0] = xVoxel;
+			coords[11][1] = yVoxel + 1;
+			coords[11][2] = zVoxel - 1;
+
+			/* 13th voxel */
+			coords[12][0] = xVoxel;
+			coords[12][1] = yVoxel + 1;
+			coords[12][2] = zVoxel + 1;
+
+			/* 14th voxel */
+			coords[13][0] = xVoxel;
+			coords[13][1] = yVoxel - 1;
+			coords[13][2] = zVoxel + 1;
+			
+			/* 15th voxel */
+			coords[14][0] = xVoxel - 1;
+			coords[14][1] = yVoxel - 1;
+			coords[14][2] = zVoxel + 1;
+			
+			/* 16th voxel */
+			coords[15][0] = xVoxel - 1;
+			coords[15][1] = yVoxel + 1;
+			coords[15][2] = zVoxel + 1;
+
+			/* 17th voxel */
+			coords[16][0] = xVoxel + 1;
+			coords[16][1] = yVoxel + 1;
+			coords[16][2] = zVoxel + 1;
+
+			/* 18th voxel */
+			coords[17][0] = xVoxel + 1;
+			coords[17][1] = yVoxel - 1;
+			coords[17][2] = zVoxel + 1;
+
+			/* 19th voxel */
+			coords[18][0] = xVoxel - 1;
+			coords[18][1] = yVoxel - 1;
+			coords[18][2] = zVoxel - 1;
+
+			/* 20th voxel */
+			coords[19][0] = xVoxel - 1;
+			coords[19][1] = yVoxel + 1;
+			coords[19][2] = zVoxel - 1;
+			
+			/* 21th voxel */
+			coords[20][0] = xVoxel + 1;
+			coords[20][1] = yVoxel + 1;
+			coords[20][2] = zVoxel - 1;
+			
+			/* 21th voxel */
+			coords[20][0] = xVoxel + 1;
+			coords[20][1] = yVoxel - 1;
+			coords[20][2] = zVoxel - 1;
+
+			break;
+			
+		default:
+			/* 6 connectivities */
+			coords = new int[6][3];
+			
+			/* 1st voxel */
+			coords[0][0] = xVoxel - 1;
+			coords[0][1] = yVoxel;
+			coords[0][2] = zVoxel;
+			
+			/* 2nd voxel */
+			coords[1][0] = xVoxel;
+			coords[1][1] = yVoxel + 1;
+			coords[1][2] = zVoxel;
+			
+			/* 3rd voxel */
+			coords[2][0] = xVoxel + 1;
+			coords[2][1] = yVoxel;
+			coords[2][2] = zVoxel;
+			
+			/* 4th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel - 1;
+			coords[3][2] = zVoxel;
+			
+			/* 5th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel;
+			coords[3][2] = zVoxel - 1;
+			
+			/* 6th voxel */
+			coords[3][0] = xVoxel;
+			coords[3][1] = yVoxel;
+			coords[3][2] = zVoxel + 1;
+		}
+		
+		return coords;
+	}
+	
+	public static boolean isInStudiedAread(int x, int y, BufferedImage img) {
+		
+		return (x >= 0 && y >=0 && x < img.getWidth() && y < img.getHeight());
+	}
 }

@@ -41,13 +41,19 @@
 
 package ui;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSlider;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import utils.ImTool;
 
@@ -55,7 +61,7 @@ import utils.ImTool;
  * Simple {@link JFrame frame} displaying an image.
  *
  */
-public class ImFrame extends JFrame{
+public class ImFrame extends JFrame implements ChangeListener{
 
 	/**
 	 * 
@@ -77,6 +83,12 @@ public class ImFrame extends JFrame{
 	 */
 	public static final int IMAGE_REAL_SIZE = 0;
 
+	private JSlider levelSlider;
+	private ArrayList<BufferedImage> images;
+	private JPanel mainPanel;
+	private JPanel imgPanel;
+	private int percent;
+	
 	/**
 	 * Creates a frame and prints an image on the screen.
 	 * 
@@ -97,7 +109,7 @@ public class ImFrame extends JFrame{
 	public ImFrame(BufferedImage image, int percent) {
 
 		super();
-		
+				
 		if(ImTool.is(image).registered) {
 			
 			this.setTitle(ImTool.getNameOf(image));
@@ -107,7 +119,8 @@ public class ImFrame extends JFrame{
 			this.setTitle("Image");
 		}
 		
-		this.display(image, percent);
+		this.percent = percent;
+		this.display(image);
 	}
 	
 	/**
@@ -129,7 +142,15 @@ public class ImFrame extends JFrame{
 	public ImFrame(BufferedImage image, int percent, String title) {
 		
 		super(title);
-		this.display(image, percent);
+		this.percent = percent;
+		this.display(image);
+	}
+	
+	public ImFrame(ArrayList<BufferedImage> images, int percent, String title, int sliderMin, int sliderMax, int sliderInitValue) {
+		
+		super(title);
+		this.percent = percent;
+		this.display(images, sliderMin, sliderMax, sliderInitValue);
 	}
 
 	/**
@@ -141,12 +162,12 @@ public class ImFrame extends JFrame{
 	 * 
 	 * @throws NullPointerException if image is null
 	 */
-	private void display(BufferedImage image, int percent) {
+	private void display(BufferedImage image) {
 
-		if(percent > 0) {
+		if(this.percent > 0) {
 			
 			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-			image = ImTool.reSize(image, screenSize.width, screenSize.height, percent);
+			image = ImTool.reSize(image, screenSize.width, screenSize.height, this.percent);
 		}
 
 		ImageIcon icon = new ImageIcon(image);
@@ -157,5 +178,70 @@ public class ImFrame extends JFrame{
 		this.pack();
 		this.setLocationRelativeTo(null);
 		this.setVisible(true);
+	}
+	
+	private void display(ArrayList<BufferedImage> images, int sliderMin, int sliderMax, int sliderInitVal) {
+
+		// main Panel
+		this.mainPanel = new JPanel();
+		this.mainPanel.setLayout(new BorderLayout());
+
+		// show the first image
+		this.imgPanel = new JPanel();
+		this.images = images;
+		
+		if(percent > 0) {
+			
+			// Resize and show the first image
+			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+			int lastId = images.size() - 1;
+			BufferedImage img = ImTool.reSize(this.images.get(lastId), screenSize.width, screenSize.height, percent);
+			ImageIcon icon = new ImageIcon(img);
+			this.imgPanel.add(new JLabel(icon));
+		}
+		this.mainPanel.add(this.imgPanel, BorderLayout.NORTH);
+		
+		// show slider
+		this.levelSlider = new JSlider(sliderMin, sliderMax, sliderInitVal);
+		this.levelSlider.setInverted(true);
+		this.levelSlider.setPaintTrack(true); 
+		this.levelSlider.setPaintTicks(true); 
+		this.levelSlider.setPaintLabels(true); 
+		this.levelSlider.setMajorTickSpacing(sliderMax/10);
+		this.levelSlider.addChangeListener(this);
+		this.mainPanel.add(this.levelSlider, BorderLayout.SOUTH);
+        
+        this.getContentPane().add(this.mainPanel);
+		
+		this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		this.pack();
+		this.setLocationRelativeTo(null);
+		this.setVisible(true);
+	}
+
+	@Override
+	public void stateChanged(ChangeEvent e) {
+		
+		// slider value
+		int sliderValue = this.levelSlider.getValue();
+		int imgId = sliderValue - this.levelSlider.getMinimum();
+		
+		// changes for the slider
+		this.setTitle(sliderValue +" regions");
+		
+		// update the image visu
+		this.imgPanel.removeAll();
+		
+		if(this.percent > 0) {
+			
+			// Resize and show the first image
+			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+			BufferedImage img = ImTool.reSize(this.images.get(imgId), screenSize.width, screenSize.height, this.percent);
+			ImageIcon icon = new ImageIcon(img);
+			this.imgPanel.add(new JLabel(icon));
+		}
+		
+		this.imgPanel.revalidate();
+		this.imgPanel.repaint();
 	}
 }

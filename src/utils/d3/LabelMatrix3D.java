@@ -1,11 +1,11 @@
 /****************************************************************************
-* Copyright AGAT-Team (2014)						       
+* Copyright AGAT-Team (2023)						       
 * 									    
 * Contributors:								
-* J.F. Randrianasoa							    
+* B. Naegel								    
 * K. Kurtz								    
-* E. Desjardin								    
 * N. Passat								    
+* J. Randrianasoa							    
 * 									    
 * This software is a computer program whose purpose is to [describe	    
 * functionalities and technical features of your software].		    
@@ -39,15 +39,14 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package utils;
+package utils.d3;
 
-import java.awt.Point;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Stack;
 
-public class LabelMatrix implements Serializable{
+public class LabelMatrix3D implements Serializable{
 	
 	/**
 	 * 
@@ -55,48 +54,51 @@ public class LabelMatrix implements Serializable{
 	private static final long serialVersionUID = 1L;
 	
 	/**
-	 * The number of the initial regions should be remembered as the matrix could evolve.
+	 * The number of the initial regions should be remembered as the cube could evolve.
 	 */
 	private int nbInitialRegions;
 	
 	/**
-	 * The number of labels currently contained in the matrix.
+	 * The number of labels currently contained in the cube.
 	 */
 	private int nbRegions;
 
 	/**
-	 * The core of the matrix.
+	 * The core of the cube.
 	 */
-	private int[][] labels;
+	private int[][][] labels;
 	
 	/**
-	 * Creates an empty label of matrix.
+	 * Creates an empty cube of labels.
 	 * 
-	 * @see LabelMatrix#LabelMatrix(int, int) create a matrix of labels from the pixels.
+	 * @see LabelMatrix3D#LabelMatrix(int, int, int) create a matrix of labels from the pixels.
 	 */
-	public LabelMatrix() { }
+	public LabelMatrix3D() { }
 	
 	/**
-	 * Creates a matrix of labels where the number of labels equals the number of pixels.
+	 * Creates a cube of labels where the number of labels equals the number of voxels.
 	 * 
 	 * <pre>
-	 * Number of labels = width * height
+	 * Number of labels = width * height * depth
 	 * </pre>
 	 * 
 	 * @param width should be > 0
 	 * @param height should be > 0
+	 * @param depth should be > 0
 	 * 
-	 * @see LabelMatrix#LabelMatrix() instanciate an empty label of matrix
+	 * @see LabelMatrix3D#LabelMatrix() instanciate an empty label of matrix
 	 */
-	public LabelMatrix(int width, int height) {
+	public LabelMatrix3D(int width, int height, int depth) {
 		
-		this.labels = new int[width][height];
+		this.labels = new int[width][height][depth];
 		
 		int label = 0;
-		for(int y=0; y < this.getHeight(); y++) {
-			for(int x=0; x < this.getWidth(); x++) {
+		for(int y = 0; y < this.getHeight(); y++) {
+			for(int x = 0; x < this.getWidth(); x++) {
+				for(int z = 0; z < this.getDepth(); z++) {
 				
-				labels[x][y] = label++;			
+					this.labels[x][y][z] = label++;
+				}
 			}
 		}
 		
@@ -105,34 +107,45 @@ public class LabelMatrix implements Serializable{
 	}
 
 	/**
-	 * Assign one label to all cells of the matrix
+	 * Assign one label to all cells of the cube
 	 * @param l initial label
 	 */
 	public void fill(int l) {
 		
-		for(int i = 0; i < this.labels.length; ++i){
+		for(int y = 0; y < this.getHeight(); ++y){
+			for(int x=0; x < this.getWidth(); x++) {
 			
-			Arrays.fill(this.labels[i], -1);
+				Arrays.fill(this.labels[x][y], l);
+			}
 		}
 	}
 
 	
 	/**
-	 * Assigns a label to all defined pixels.
+	 * Assigns a label to all defined voxels.
 	 * 
-	 * @param pixels regrouped in a region; should not be null
+	 * @param voxels regrouped in a region; should not be null
 	 * @param label associated to a region
 	 * 
-	 * @throws NullPointerException if pixels is null
+	 * @throws NullPointerException if voxel is null
 	 */
-	public void fill(ArrayList<Point> pixels, int label) {
+	public void fill(ArrayList<Voxel> voxels, int label) {
 	
-		for(Point p : pixels) {
+		for(Voxel v : voxels) {
 			
-			this.setLabel(label, p.x, p.y);
+			this.setLabel(label, v.x, v.y, v.z);
 		}
 	}
 
+	/**
+	 * 
+	 * @return the number of values for the z axis.
+	 */
+	public int getDepth() { 
+	
+		return this.labels[0][0].length; 
+	}
+	
 	/**
 	 * 
 	 * @return the number of columns of the matrix.
@@ -146,18 +159,19 @@ public class LabelMatrix implements Serializable{
 	 * 
 	 * @param x index of the column
 	 * @param y index of the row
+	 * @param z index of the depth
 	 * @return the label at the specified coordinates
 	 */
-	public int getLabel(int x, int y) {
+	public int getLabel(int x, int y, int z) {
 		
-		return this.labels[x][y]; 
+		return this.labels[x][y][z]; 
 	}
 
 	/**
 	 * 
-	 * @return the core of the matrix.
+	 * @return the core of the cube.
 	 */
-	public int[][] getLabels() { 
+	public int[][][] getLabels() { 
 		
 		return labels; 
 	}
@@ -190,51 +204,86 @@ public class LabelMatrix implements Serializable{
 	}
 	
 	/**
-	 * Shows the content of the matrix line by line.
+	 * Shows the content of the x and y axis and z = 0.
 	 */
-	public void print() {
+	public void printXY() {
 		
 		System.out.println("Matrix of labels");
 		
-		for(int j = 0; j < labels[0].length; j++) {
-			for(int i = 0; i < labels.length; i++){
+		for(int y = 0; y < this.getHeight(); y++) {
+			for(int x = 0; x < this.getWidth(); x++){
 				
-				System.out.print(labels[i][j] + " | ");
+				System.out.print(labels[x][y][0] + " | ");
+			}
+			System.out.println("");
+		}	
+	}
+	
+	/**
+	 * Shows the content of the x and z axis and y = 0.
+	 */
+	public void printXZ() {
+		
+		System.out.println("Matrix of labels");
+		
+		for(int x = 0; x < this.getWidth(); x++) {
+			for(int z = 0; z < this.getDepth(); z++){
+				
+				System.out.print(labels[x][0][z] + " | ");
+			}
+			System.out.println("");
+		}	
+	}
+	
+	/**
+	 * Shows the content of the y and z axis and x = 0.
+	 */
+	public void printYZ() {
+		
+		System.out.println("Matrix of labels");
+		
+		for(int y = 0; y < this.getHeight(); y++) {
+			for(int z = 0; z < this.getDepth(); z++){
+				
+				System.out.print(labels[0][y][z] + " | ");
 			}
 			System.out.println("");
 		}	
 	}
 
 	/**
-	 * Assign a label to a pixel located at x,y.
+	 * Assign a label to a cell located at x, y, z.
 	 * 
 	 * @param label associated to a region
 	 * @param x index of the column; should be >= 0
 	 * @param y index of the row; should be >= 0
+	 * @param z index of the row; should be >= 0
 	 */
-	public void setLabel(int label, int x, int y) { 
+	public void setLabel(int label, int x, int y, int z) { 
 		
-		this.labels[x][y] = label; 
+		this.labels[x][y][z] = label; 
 	}
 
 	/**
-	 * Assign a predefined matrix to the core.
+	 * Assign a predefined cube to the core.
 	 * @param labels contains all regions configuration; should not be null
 	 * 
 	 * @throws NullPointerException if the parameter labels is null
 	 */
-	public void setLabels(int[][] labels) {
+	public void setLabels(int[][][] labels) {
 		
 		this.labels = labels;
 		
 		Stack<Integer> regions = new Stack<Integer>();
 		
-		for(int j = 0; j < labels[0].length; j++) {
-			for(int i = 0; i < labels.length; i++){
+		for(int y = 0; y < this.getHeight(); ++y){
+			for(int x = 0; x < this.getWidth(); x++) {
+				for(int z = 0; z < this.getDepth(); z++) {
 				
-				if(!regions.contains(labels[i][j])) {
-					
-					regions.push(labels[i][j]);
+					if(!regions.contains(labels[x][y][z])) {
+						
+						regions.push(labels[x][y][z]);
+					}
 				}
 			}
 		}

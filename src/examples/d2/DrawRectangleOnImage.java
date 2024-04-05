@@ -39,41 +39,40 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package examples;
+package examples.d2;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
 
-import ui.ImFrame;
 import utils.ImTool;
-import utils.LabelMatrix;
 
 /**
- * Example generating an image of regions from a label matrix an a LUT using {@link ImTool}.
- *
+ * Example drawing some rectangles on an image using {@link ImTool}.
  */
-public class GenerateRegions {
+public class DrawRectangleOnImage {
 
 	public static void main(String[] args) {
 
-		int width = 3;
-		int height = 3;
+		/* Load the image */
+		String path = "xp//examples//lena.jpg";
+		BufferedImage image = ImTool.read(path);
 		
-		/* Example 1: each pixel is considered as a region */
-		LabelMatrix labelMatrix1 = new LabelMatrix(width, height);		
-		HashMap<Integer, Color> lut = new HashMap<Integer, Color>();
-
-		BufferedImage pixelRegions = ImTool.generateRegions(labelMatrix1, lut);
-		ImTool.show(pixelRegions, ImFrame.IMAGE_DEFAULT_SIZE, "Pixel regions");
+		/* Green rectangle parameters */
+		int minX1 = 89;
+		int maxX1 = 450;
+		int minY1 = 50;
+		int maxY1 = 420;
+		int color1 = ImTool.RGB_GREEN;
+		ImTool.drawRectangleOn(image, minX1, maxX1, minY1, maxY1, color1);
 		
-		/* Example 2: manual definition of regions */
-		LabelMatrix labelMatrix2 = new LabelMatrix();
-		int[][] labels = {{0, 0, 1},{0, 1, 2},{0, 1, 2}};
-		labelMatrix2.setLabels(labels);
+		/* Random color rectangle parameters */
+		int minX2 = 261;
+		int maxX2 = 379;
+		int minY2 = 263;
+		int maxY2 = 303;
+		int color2 = ImTool.generateRandomColorRGBValue();
+		ImTool.drawRectangleOn(image, minX2, maxX2, minY2, maxY2, color2);
 		
-		BufferedImage manualRegions = ImTool.generateRegions(labelMatrix2, lut);
-		ImTool.show(manualRegions, ImFrame.IMAGE_DEFAULT_SIZE, "Manual regions");
+		/* Showing the result */
+		ImTool.show(image, 50, "Drawing rectangles");
 	}
-
 }

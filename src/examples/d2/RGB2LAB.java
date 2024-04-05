@@ -39,7 +39,7 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package examples;
+package examples.d2;
 
 import java.awt.image.BufferedImage;
 

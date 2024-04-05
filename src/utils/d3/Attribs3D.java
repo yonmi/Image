@@ -39,31 +39,64 @@
 * The full license is in the file LICENSE, distributed with this software.  
 *****************************************************************************/
 
-package examples;
-
-import java.awt.image.BufferedImage;
-
-import ui.ImFrame;
-import utils.ImTool;
+package utils.d3;
 
 /**
- * Example loading and displaying an image using {@link ImTool}.
- * 
+ * Stores advanced attributes of a {@link RGBStruct RGBCube}.
+ *
  * <p>
- * N.B. The maximum number of bands here can be more than 3 bands; 
- * 
- * <p>
- * The min and max values of the pixels for each bands should be first initialized before preparing the views of the image. 
- * 
+ * They are:
+ * <li> directory
+ * <li> max
+ * <li> min
+ * <li> name
+ * <li> path
+ *
  */
-public class LoadAndShow_Xbands {
+public class Attribs3D {
 
-	public static void main(String[] args) {
-		
-		String path = "xp//examples//lena.jpg";
-		BufferedImage image = ImTool.read(path);
-		ImTool.initMinMaxValues(image);
-		ImTool.prepareViewsFrom(image, ImTool.DEFAULT_RGB_ORDER);
-		ImTool.show(ImTool.getActiveViewOf(image), ImFrame.IMAGE_DEFAULT_SIZE);
-	}
+
+	/**
+	 * Matrix used for pixel labeling. 
+	 */
+	public LabelMatrix3D labelMatrix3D;
+
+	/**
+	 * Storing each maximum grayscale value for each band. 
+	 */
+	public double[] max;
+
+	/**
+	 * Storing each minimum grayscale values for each band. 
+	 */
+	public double[] min;
+
+	/**
+	 * Indicates if the min and max values of image has been previously saved.
+	 */
+	public boolean minMaxPrepared;
+
+	/**
+	 * Name of the image with its extension.
+	 */
+	public String name;
+	
+	/**
+	 * Path combining the directory and the name of the image.
+	 */
+	public String path;
+	
+	/**
+	 * Indicates if the image has been registered or not.
+	 */
+	public boolean registered;
+
+	public String directory;
+
+
+	/**
+	 * Creates an empty set of attributes.
+	 * 
+	 */
+	public Attribs3D() {}
 }
